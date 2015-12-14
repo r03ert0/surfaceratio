@@ -24,6 +24,8 @@
 #define kBrainVisaMesh		2
 #define kFreeSurferData		3
 #define kSRatioFloatData	4
+#define kMINCData		5
+#define kTEXTData		6
 
 
 typedef struct
@@ -92,8 +94,8 @@ void swapvertices()
 }
 int getformatindex(char *path)
 {
-	char	*formats[]={"orig","pial","white","mesh","sratio","sratiofloat","curv"};
-	int		i,j,n=7; // n=7, because there are 6 recognised formats
+	char	*formats[]={"orig","pial","white","mesh","sratio","sratiofloat","curv","obj","txt"};
+	int		i,j,n=9; // n=9, because there are 8 recognised formats
 	int		found,index;
 	
 	for(i=0;i<n;i++)
@@ -128,7 +130,18 @@ int getformatindex(char *path)
 		index=kSRatioFloatData;
 		printf("SRatioFloat Data (call surfaceratio without arguments for more information)\n");
 	}
-		
+	else
+	if(i==7)
+	{
+		index=kMINCData;
+		printf("MINC Surface Data\n");
+	}
+	else
+	if(i==8)
+	{
+		index=kTEXTData;
+		printf("Text output data\n");
+	}
 	return index;
 }
 int FreeSurfer_load_mesh(char *path)
@@ -265,6 +278,57 @@ int BrainVisa_load_mesh(char *path)
     
     return 0;
 }
+
+int MINC_load_mesh(char *path)
+{
+	FILE	*f;
+	char	tmp[6];
+	int		i;
+	
+	f=fopen(path,"r");
+	if(f==NULL){printf("ERROR: Cannot open file\n");return 1;}
+
+	fscanf(f,"%*s %*f %*f %*f %*i %*i");	// IGNORE HEADER
+
+	// READ 3-D COORDINATES
+	fscanf(f," %i\n",&np);
+	p = (float3D*)calloc(np,sizeof(float3D));
+	printf("# of points: %i\n",np);
+
+	for(i=0;i<np;i++) {
+		fscanf(f,"%f %f %f", &p[i].x,&p[i].y,&p[i].z);
+	}
+
+	for(i=0;i<np;i++) {						// ignore normal vectors
+		fscanf(f,"%*f %*f %*f");
+	}
+
+	fscanf(f,"%i ",&nt);					// num  triangles
+	printf("#triangles: %i\n", nt);
+	t = (int3D*)calloc(nt,sizeof(int3D));
+
+	fscanf(f,"%*s %*s %*s %*s %*s");		// ignore polygon header
+
+	for(i=0;i<nt;i++) {						// ignore vertex/polygon colours
+		fscanf(f," %*i ");
+	}
+
+	for(i=0;i<nt;i++) {						// read connectivity
+		fscanf(f," %i %i %i ", &t[i].a,&t[i].b,&t[i].c);
+	}
+	
+	fclose(f);
+	
+	for(i=0;i<np;i++) {
+		p[i].x+=128;
+		p[i].y+=128;
+		p[i].z+=128;
+	}
+
+	return 0;
+
+}
+
 int FreeSurfer_save_data(char *path, float *d, int np)
 {
 	FILE	*f;
@@ -339,6 +403,22 @@ int SRatioFloat_save_data(char *path, float *d, int np)
 	fclose(f);
 
 	return 0;
+}
+
+int TEXT_save_data(char *path, float *d, int np)
+{
+    FILE	*f;
+    int i; 
+    f=fopen(path,"w");
+    if(f==NULL)
+        return 1;
+	
+	for(i=0;i<np;i++)
+	{
+		fprintf(f, "%f\n", d[i]);
+	}
+	fclose(f);
+    return 0;
 }
 
 #pragma mark -
@@ -500,6 +580,9 @@ int main(int argc, char *argv[])
 		case kBrainVisaMesh:
 			err=BrainVisa_load_mesh(argv[1]);
 			break;
+		case kMINCData:
+			err=MINC_load_mesh(argv[1]);
+			break;
 		default:
 			printf("ERROR: Input mesh format not recognised\n");
 			return 1;
@@ -521,6 +604,9 @@ int main(int argc, char *argv[])
 			break;
 		case kSRatioFloatData:
 			SRatioFloat_save_data(argv[2],sr,np);
+			break;
+		case kTEXTData:
+			TEXT_save_data(argv[2],sr,np);
 			break;
 		default:
 			printf("ERROR: Output data format not recognised\n");
