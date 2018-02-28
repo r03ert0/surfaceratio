@@ -1,15 +1,17 @@
-Surface Ratio
+## Surface Ratio
 
 Usage:
   
-  surfaceratio input-pial-surface output-surfaceratio-vector
+  `surfaceratio input-pial-surface output-surfaceratio-vector`
   
   or
   
-  surfaceratio input-pial-surface output-surfaceratio-vector radius
+  `surfaceratio input-pial-surface output-surfaceratio-vector radius`
   
   In the first case a sphere radius of 20mm is used.
+  
   On input, FreeSurfer, BrainVisa and MINC Object mesh formats are accepted.
+ 
   On output, the surface ratio vector can be written as a 'sratio' file, which
   is encoded in FreeSurfer 'curv' format, MINC txt format, or in 'sratiofloat'
   format, easier to read from C code, in which the first line indicates the
